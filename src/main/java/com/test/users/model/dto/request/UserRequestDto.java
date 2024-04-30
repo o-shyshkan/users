@@ -1,7 +1,9 @@
 package com.test.users.model.dto.request;
 
 
-import com.test.users.validation.Email;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Past;
 import lombok.Data;
 import java.time.LocalDate;
 
@@ -11,6 +13,7 @@ public class UserRequestDto {
     private String email;
     private String firstName;
     private String lastName;
+    @Past
     private LocalDate birthDate;
     private String address;
     private String phoneNumber;

@@ -37,6 +37,7 @@ public class UserRestControllerIntegrationTest {
 
     public static final String EXPECTED_RESTRICTION_BY_AGE = "There is restriction by age : ";
     public static final String EXPECTED_EMAIL_SHOULD_BE_VALID = "{\"errors\":[\"Email should be valid\"]";
+    public static final String EXPECTED_BIRTHDAY_SHOULD_BE_VALID = "{\"errors\":[\"must be a past date\"]";
     public static final String URL_USERS_ID = "/users/{id}";
     public static final String URL_USER_ADD = "/users/add";
     public static final String URL_BIRTH_DATE_WRONG_ORDER = "/users/birth-date?beginDate=01.01.2010&endDate=01.01.2005";
@@ -50,6 +51,7 @@ public class UserRestControllerIntegrationTest {
     public static final String $_LAST_NAME = "$.lastName";
     public static final String $_BIRTH_DATE = "$.birthDate";
     public static final String WRONG_EMAIL = "@gmail.com";
+    public static final LocalDate WRONG_BIRTHDAY = LocalDate.now().plusYears(1);
     public static final String $_SIZE = "$.size()";
     @Autowired
     private MockMvc mvc;
@@ -128,12 +130,27 @@ public class UserRestControllerIntegrationTest {
     }
 
     @Test
+    public void givenUser_whenPostUserWithWrongBirthDay_thenReturn400() throws Exception {
+        bob.setBirthDate(WRONG_BIRTHDAY);
+        mvc.perform(post(URL_USER_ADD).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(bob)))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> Assertions.assertEquals(EXPECTED_BIRTHDAY_SHOULD_BE_VALID + "}",
+                        result.getResponse().getContentAsString()))
+                .andDo(print());
+    }
+
+    @Test
     public void givenUserId_whenPatchUser_thenReturn200() throws Exception {
         User alice = new User();
         alice.setId(ALICE_ID);
         alice.setLastName("Pink");
+        UserResponseDto aliceDto = new UserResponseDto();
+        aliceDto.setId(ALICE_ID);
+        aliceDto.setLastName("Pink");
         when(userDtoRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(alice);
         when(userService.update(alice)).thenReturn(alice);
+        when(userDtoResponseMapper.toDto(alice)).thenReturn(aliceDto);
         mvc.perform(patch(URL_USERS_ID, ALICE_ID).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(alice)))
                 .andExpect(status().isOk())
@@ -146,6 +163,7 @@ public class UserRestControllerIntegrationTest {
     public void givenUserId_whenPutUser_thenReturn200() throws Exception {
         when(userDtoRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(bob);
         when(userService.update(bob)).thenReturn(bob);
+        when(userDtoResponseMapper.toDto(bob)).thenReturn(bobDto);
         mvc.perform(patch(URL_USERS_ID, BOB_ID).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bob)))
                 .andExpect(status().isOk())
@@ -158,18 +176,10 @@ public class UserRestControllerIntegrationTest {
     }
 
     @Test
-    public void givenUserId_whenDeleteUser_thenReturnNoContent() throws Exception {
+    public void givenUserId_whenDeleteUser_thenReturn200() throws Exception {
         doNothing().when(userService).remove(BOB_ID);
         mvc.perform(delete(URL_USERS_ID, BOB_ID))
-                .andExpect(status().isNoContent())
-                .andDo(print());
-    }
-
-    @Test
-    public void givenUserId_whenDeleteUserAndException_thenReturn500() throws Exception {
-        doThrow(Exception.class).when(userService);
-        mvc.perform(delete(URL_USERS_ID, BOB_ID))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isOk())
                 .andDo(print());
     }
 

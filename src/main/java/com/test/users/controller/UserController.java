@@ -3,6 +3,7 @@ package com.test.users.controller;
 import com.test.users.mapper.DtoRequestMapper;
 import com.test.users.mapper.DtoResponseMapper;
 import com.test.users.service.UserService;
+import com.test.users.util.CalculateAge;
 import com.test.users.util.DateTimePatternUtil;
 import com.test.users.validation.BirthDaysParameters;
 import jakarta.validation.Valid;
@@ -40,12 +41,13 @@ public class UserController {
     private final DtoRequestMapper<UserRequestDto, User> userDtoRequestMapper;
     private final DtoResponseMapper<UserResponseDto, User> userDtoResponseMapper;
     private final UserService userService;
+    private final CalculateAge calculateAge = new CalculateAge();
     @Value("${application.allowed_age_registration}")
     private int ageLimit;
 
     @PostMapping("/add")
     public UserResponseDto add(@RequestBody @Valid UserRequestDto userRequestDto) {
-        if (getAgeFromBirthDate(userRequestDto.getBirthDate()) <= ageLimit) {
+        if (CalculateAge.getAgeFromBirthDate(userRequestDto.getBirthDate()) <= ageLimit) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MESSAGE_RESTRICTION_BY_AGE + ageLimit);
         }
         User user = userService.add(userDtoRequestMapper.fromDto(userRequestDto));
@@ -69,13 +71,8 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<HttpStatus> delete(@PathVariable Long id) {
-        try {
-            userService.remove(id);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public void delete(@PathVariable Long id) {
+        userService.remove(id);
     }
 
     @GetMapping("/birth-date")
@@ -86,9 +83,5 @@ public class UserController {
         return userService.findUserByBirthDateRange(beginDate, endDate).stream()
                 .map(userDtoResponseMapper::toDto)
                 .collect(Collectors.toList());
-    }
-
-    private int getAgeFromBirthDate(LocalDate birthDate) {
-        return LocalDate.now().getYear() - birthDate.getYear();
     }
 }

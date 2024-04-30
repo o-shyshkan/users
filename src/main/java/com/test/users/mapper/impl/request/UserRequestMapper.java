@@ -17,6 +17,5 @@ public class UserRequestMapper implements DtoRequestMapper<UserRequestDto, User>
         user.setAddress(dto.getAddress());
         user.setPhoneNumber(dto.getPhoneNumber());
         return user;
-
     }
 }
