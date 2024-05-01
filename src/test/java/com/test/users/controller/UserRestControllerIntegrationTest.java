@@ -43,14 +43,14 @@ public class UserRestControllerIntegrationTest {
     public static final String URL_BIRTH_DATE_CORRECT_ORDER = "/users/birth-date?beginDate=01.01.2000&endDate=01.01.2005";
     public static final long BOB_ID = 1L;
     public static final long PETER_ID = 2L;
-    public static final String $_ID = "$.id";
-    public static final String $_EMAIL = "$.email";
-    public static final String $_FIRST_NAME = "$.firstName";
-    public static final String $_LAST_NAME = "$.lastName";
-    public static final String $_BIRTH_DATE = "$.birthDate";
+    public static final String $_ID = "$.data.[*].id";
+    public static final String $_EMAIL = "$.data.[*]email";
+    public static final String $_FIRST_NAME = "$.data.[*]firstName";
+    public static final String $_LAST_NAME = "$.data.[*]lastName";
+    public static final String $_BIRTH_DATE = "$.data.[*]birthDate";
+    public static final String $_SIZE = "$.data.size()";
     public static final String WRONG_EMAIL = "@gmail.com";
     public static final LocalDate WRONG_BIRTHDAY = LocalDate.now().plusYears(1);
-    public static final String $_SIZE = "$.size()";
     public static final String LAST_NAME_PINK = "Pink";
     @Autowired
     private MockMvc mvc;
@@ -99,7 +99,7 @@ public class UserRestControllerIntegrationTest {
         mvc.perform(post(URL_USER_ADD).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(bob)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath($_ID).value(bob.getId()))
+                .andExpect(jsonPath($_ID).value(bob.getId().intValue()))
                 .andExpect(jsonPath($_EMAIL).value(bob.getEmail()))
                 .andExpect(jsonPath($_FIRST_NAME).value(bob.getFirstName()))
                 .andExpect(jsonPath($_LAST_NAME).value(bob.getLastName()))
@@ -153,7 +153,7 @@ public class UserRestControllerIntegrationTest {
         mvc.perform(patch(URL_USERS_ID, PETER_ID).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(peterResponseDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath($_ID).value(peter.getId()))
+                .andExpect(jsonPath($_ID).value(peter.getId().intValue()))
                 .andExpect(jsonPath($_LAST_NAME).value(peter.getLastName()))
                 .andDo(print());
     }
@@ -166,7 +166,7 @@ public class UserRestControllerIntegrationTest {
         mvc.perform(put(URL_USERS_ID, BOB_ID).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bob)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath($_ID).value(bob.getId()))
+                .andExpect(jsonPath($_ID).value(bob.getId().intValue()))
                 .andExpect(jsonPath($_EMAIL).value(bob.getEmail()))
                 .andExpect(jsonPath($_FIRST_NAME).value(bob.getFirstName()))
                 .andExpect(jsonPath($_LAST_NAME).value(bob.getLastName()))
@@ -188,6 +188,7 @@ public class UserRestControllerIntegrationTest {
         when(userService.findUserByBirthDateRange(
                 LocalDate.of(2000,1,1),
                 LocalDate.of(2005,1,1))).thenReturn(expectedUsers);
+        when(userResponseMapper.toDto(any(User.class))).thenReturn(bobResponseDto);
         mvc.perform(get(URL_BIRTH_DATE_CORRECT_ORDER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath($_SIZE).value(expectedUsers.size()))

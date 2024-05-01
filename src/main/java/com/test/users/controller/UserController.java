@@ -29,6 +29,7 @@ import com.test.users.model.User;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -44,26 +45,26 @@ public class UserController {
     private int ageLimit;
 
     @PostMapping("/add")
-    public UserResponseDto add(@RequestBody @Valid UserRequestDto userRequestDto) {
+    public Map<String, List<UserResponseDto>> add(@RequestBody @Valid UserRequestDto userRequestDto) {
         if (CalculateAge.getAgeFromBirthDate(userRequestDto.getBirthDate()) <= ageLimit) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MESSAGE_RESTRICTION_BY_AGE + ageLimit);
         }
         User user = userService.add(userRequestMapper.fromDto(userRequestDto));
-        return userResponseMapper.toDto(user);
+        return Map.of("data", List.of(userResponseMapper.toDto(user)));
     }
 
     @PatchMapping("/{id}")
-    public UserResponseDto updatePatch(@PathVariable Long id,
+    public Map<String, List<UserResponseDto>> updatePatch(@PathVariable Long id,
                        @RequestBody @Valid UserRequestDto userRequestDto) {
-        return userResponseMapper.toDto(userService.updatePartial(userRequestDto, id));
+        return Map.of("data", List.of(userResponseMapper.toDto(userService.updatePartial(userRequestDto, id))));
     }
 
     @PutMapping("/{id}")
-    public UserResponseDto updatePut(@PathVariable Long id,
+    public Map<String, List<UserResponseDto>> updatePut(@PathVariable Long id,
                        @RequestBody @Valid UserRequestDto userRequestDto) {
         User user = userRequestMapper.fromDto(userRequestDto);
         user.setId(id);
-        return userResponseMapper.toDto(userService.update(user));
+        return Map.of("data", List.of(userResponseMapper.toDto(userService.update(user))));
     }
 
     @DeleteMapping("/{id}")
@@ -73,11 +74,11 @@ public class UserController {
 
     @GetMapping("/birth-date")
     @BirthDaysParameters
-    public List<UserResponseDto> findBirthDateRange(
+    public Map<String, List<UserResponseDto>> findBirthDateRange(
             @RequestParam @NotNull @DateTimeFormat(pattern = DateTimePatternUtil.DATE_PATTERN) LocalDate beginDate,
             @RequestParam @NotNull @DateTimeFormat(pattern = DateTimePatternUtil.DATE_PATTERN) LocalDate endDate) {
-        return userService.findUserByBirthDateRange(beginDate, endDate).stream()
+        return Map.of("data",userService.findUserByBirthDateRange(beginDate, endDate).stream()
                 .map(userResponseMapper::toDto)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 }
