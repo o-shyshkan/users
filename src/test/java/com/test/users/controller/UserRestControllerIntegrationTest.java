@@ -1,8 +1,8 @@
 package com.test.users.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.test.users.mapper.impl.request.UserRequestMapper;
-import com.test.users.mapper.impl.response.UserResponseMapper;
+import com.test.users.mapper.RequestMapper;
+import com.test.users.mapper.ResponseMapper;
 import com.test.users.model.User;
 import com.test.users.model.dto.request.UserRequestDto;
 import com.test.users.model.dto.response.UserResponseDto;
@@ -22,11 +22,11 @@ import java.util.Arrays;
 import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,7 +34,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 @WebMvcTest(UserController.class)
 public class UserRestControllerIntegrationTest {
-
     public static final String EXPECTED_RESTRICTION_BY_AGE = "There is restriction by age : ";
     public static final String EXPECTED_EMAIL_SHOULD_BE_VALID = "{\"errors\":[\"Email should be valid\"]";
     public static final String EXPECTED_BIRTHDAY_SHOULD_BE_VALID = "{\"errors\":[\"must be a past date\"]";
@@ -44,7 +43,6 @@ public class UserRestControllerIntegrationTest {
     public static final String URL_BIRTH_DATE_CORRECT_ORDER = "/users/birth-date?beginDate=01.01.2000&endDate=01.01.2005";
     public static final long BOB_ID = 1L;
     public static final long PETER_ID = 2L;
-    public static final long ALICE_ID = 3L;
     public static final String $_ID = "$.id";
     public static final String $_EMAIL = "$.email";
     public static final String $_FIRST_NAME = "$.firstName";
@@ -53,6 +51,7 @@ public class UserRestControllerIntegrationTest {
     public static final String WRONG_EMAIL = "@gmail.com";
     public static final LocalDate WRONG_BIRTHDAY = LocalDate.now().plusYears(1);
     public static final String $_SIZE = "$.size()";
+    public static final String LAST_NAME_PINK = "Pink";
     @Autowired
     private MockMvc mvc;
     @Autowired
@@ -60,14 +59,14 @@ public class UserRestControllerIntegrationTest {
     @MockBean
     private UserService userService;
     @MockBean
-    private UserRequestMapper userDtoRequestMapper;
+    private RequestMapper userRequestMapper;
     @MockBean
-    private UserResponseMapper userDtoResponseMapper;
+    private ResponseMapper userResponseMapper;
     @Value("${application.allowed_age_registration}")
     private int ageLimit;
     private User bob;
     private User peter;
-    private UserResponseDto bobDto;
+    private UserResponseDto bobResponseDto;
 
     @BeforeEach
     public void setup(){
@@ -83,19 +82,20 @@ public class UserRestControllerIntegrationTest {
         peter.setFirstName("Peter");
         peter.setLastName("Apple");
         peter.setBirthDate(LocalDate.of(2000,1,1));
-        bobDto = new UserResponseDto();
-        bobDto.setId(BOB_ID);
-        bobDto.setEmail("1234@gmail.com");
-        bobDto.setFirstName("Bob");
-        bobDto.setLastName("Bird");
-        bobDto.setBirthDate(LocalDate.of(1985,1,1));
+        bobResponseDto = new UserResponseDto();
+        bobResponseDto.setId(BOB_ID);
+        bobResponseDto.setEmail("1234@gmail.com");
+        bobResponseDto.setFirstName("Bob");
+        bobResponseDto.setLastName("Bird");
+        bobResponseDto.setBirthDate(LocalDate.of(1985,1,1));
     }
 
     @Test
     public void givenUser_whenPostUser_thenReturn200() throws Exception {
-        when(userDtoRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(bob);
+        //when(userRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(bob);
+        when(userRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(bob);
         when(userService.add(any(User.class))).thenReturn(bob);
-        when(userDtoResponseMapper.toDto(bob)).thenReturn(bobDto);
+        when(userResponseMapper.toDto(bob)).thenReturn(bobResponseDto);
         mvc.perform(post(URL_USER_ADD).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(bob)))
                 .andExpect(status().isOk())
@@ -142,29 +142,28 @@ public class UserRestControllerIntegrationTest {
 
     @Test
     public void givenUserId_whenPatchUser_thenReturn200() throws Exception {
-        User alice = new User();
-        alice.setId(ALICE_ID);
-        alice.setLastName("Pink");
-        UserResponseDto aliceDto = new UserResponseDto();
-        aliceDto.setId(ALICE_ID);
-        aliceDto.setLastName("Pink");
-        when(userDtoRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(alice);
-        when(userService.update(alice)).thenReturn(alice);
-        when(userDtoResponseMapper.toDto(alice)).thenReturn(aliceDto);
-        mvc.perform(patch(URL_USERS_ID, ALICE_ID).contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(alice)))
+        UserRequestDto peterRequestDto = new UserRequestDto();
+        peterRequestDto.setLastName(LAST_NAME_PINK);
+        UserResponseDto peterResponseDto = new UserResponseDto();
+        peterResponseDto.setId(PETER_ID);
+        peterResponseDto.setLastName(LAST_NAME_PINK);
+        when(userService.updatePartial(peterRequestDto, PETER_ID)).thenReturn(peter);
+        peter.setLastName(LAST_NAME_PINK);
+        when(userResponseMapper.toDto(peter)).thenReturn(peterResponseDto);
+        mvc.perform(patch(URL_USERS_ID, PETER_ID).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(peterResponseDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath($_ID).value(alice.getId()))
-                .andExpect(jsonPath($_LAST_NAME).value(alice.getLastName()))
+                .andExpect(jsonPath($_ID).value(peter.getId()))
+                .andExpect(jsonPath($_LAST_NAME).value(peter.getLastName()))
                 .andDo(print());
     }
 
     @Test
     public void givenUserId_whenPutUser_thenReturn200() throws Exception {
-        when(userDtoRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(bob);
+        when(userRequestMapper.fromDto(any(UserRequestDto.class))).thenReturn(bob);
         when(userService.update(bob)).thenReturn(bob);
-        when(userDtoResponseMapper.toDto(bob)).thenReturn(bobDto);
-        mvc.perform(patch(URL_USERS_ID, BOB_ID).contentType(MediaType.APPLICATION_JSON)
+        when(userResponseMapper.toDto(bob)).thenReturn(bobResponseDto);
+        mvc.perform(put(URL_USERS_ID, BOB_ID).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(bob)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath($_ID).value(bob.getId()))

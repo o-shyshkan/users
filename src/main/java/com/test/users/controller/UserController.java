@@ -1,7 +1,7 @@
 package com.test.users.controller;
 
-import com.test.users.mapper.DtoRequestMapper;
-import com.test.users.mapper.DtoResponseMapper;
+import com.test.users.mapper.RequestMapper;
+import com.test.users.mapper.ResponseMapper;
 import com.test.users.service.UserService;
 import com.test.users.util.CalculateAge;
 import com.test.users.util.DateTimePatternUtil;
@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,10 +37,9 @@ import java.util.stream.Collectors;
 @Validated
 public class UserController {
     public static final String MESSAGE_RESTRICTION_BY_AGE = "There is restriction by age : ";
-    private final DtoRequestMapper<UserRequestDto, User> userDtoRequestMapper;
-    private final DtoResponseMapper<UserResponseDto, User> userDtoResponseMapper;
+    private final RequestMapper userRequestMapper;
+    private final ResponseMapper userResponseMapper;
     private final UserService userService;
-    private final CalculateAge calculateAge = new CalculateAge();
     @Value("${application.allowed_age_registration}")
     private int ageLimit;
 
@@ -50,24 +48,22 @@ public class UserController {
         if (CalculateAge.getAgeFromBirthDate(userRequestDto.getBirthDate()) <= ageLimit) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, MESSAGE_RESTRICTION_BY_AGE + ageLimit);
         }
-        User user = userService.add(userDtoRequestMapper.fromDto(userRequestDto));
-        return userDtoResponseMapper.toDto(user);
+        User user = userService.add(userRequestMapper.fromDto(userRequestDto));
+        return userResponseMapper.toDto(user);
     }
 
     @PatchMapping("/{id}")
     public UserResponseDto updatePatch(@PathVariable Long id,
                        @RequestBody @Valid UserRequestDto userRequestDto) {
-        User user = userDtoRequestMapper.fromDto(userRequestDto);
-        user.setId(id);
-        return userDtoResponseMapper.toDto(userService.update(user));
+        return userResponseMapper.toDto(userService.updatePartial(userRequestDto, id));
     }
 
     @PutMapping("/{id}")
     public UserResponseDto updatePut(@PathVariable Long id,
                        @RequestBody @Valid UserRequestDto userRequestDto) {
-        User user = userDtoRequestMapper.fromDto(userRequestDto);
+        User user = userRequestMapper.fromDto(userRequestDto);
         user.setId(id);
-        return userDtoResponseMapper.toDto(userService.update(user));
+        return userResponseMapper.toDto(userService.update(user));
     }
 
     @DeleteMapping("/{id}")
@@ -81,7 +77,7 @@ public class UserController {
             @RequestParam @NotNull @DateTimeFormat(pattern = DateTimePatternUtil.DATE_PATTERN) LocalDate beginDate,
             @RequestParam @NotNull @DateTimeFormat(pattern = DateTimePatternUtil.DATE_PATTERN) LocalDate endDate) {
         return userService.findUserByBirthDateRange(beginDate, endDate).stream()
-                .map(userDtoResponseMapper::toDto)
+                .map(userResponseMapper::toDto)
                 .collect(Collectors.toList());
     }
 }

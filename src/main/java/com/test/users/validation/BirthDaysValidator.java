@@ -8,7 +8,6 @@ import java.time.LocalDate;
 
 @SupportedValidationTarget(ValidationTarget.PARAMETERS)
 public class BirthDaysValidator implements ConstraintValidator<BirthDaysParameters, Object[]> {
-
     public static final int BEGIN_DATE = 0;
     public static final int END_DATE = 1;
 

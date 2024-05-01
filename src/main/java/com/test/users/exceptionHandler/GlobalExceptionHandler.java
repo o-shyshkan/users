@@ -13,7 +13,6 @@ import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
-
     public static final String KEY_ERRORS = "errors";
 
     @ExceptionHandler({MethodArgumentNotValidException.class})
